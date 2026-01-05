@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "FHlK+YMBYTo=",
+  "dgSpecHash": "dHgvAeZOwhs=",
   "success": true,
-  "projectFilePath": "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\Futbol.Api.csproj",
+  "projectFilePath": "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\Futbol.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\facun\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\facun\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

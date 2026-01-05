@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\Futbol.Api.csproj": {}
+    "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\Futbol.Api.csproj": {}
   },
   "projects": {
-    "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\Futbol.Api.csproj": {
+    "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\Futbol.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\Futbol.Api.csproj",
+        "projectUniqueName": "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\Futbol.Api.csproj",
         "projectName": "Futbol.Api",
-        "projectPath": "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\Futbol.Api.csproj",
+        "projectPath": "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\Futbol.Api.csproj",
         "packagesPath": "C:\\Users\\facun\\.nuget\\packages\\",
-        "outputPath": "C:\\python-proyects\\futbol-saas\\api\\Futbol.Api\\obj\\",
+        "outputPath": "C:\\python-proyects\\futbol-saas\\API\\Futbol.Api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

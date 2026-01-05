@@ -156,3 +156,4 @@ C:\python-proyects\futbol-saas\api\Futbol.Api\obj\Debug\net9.0\refint\Futbol.Api
 C:\python-proyects\futbol-saas\api\Futbol.Api\obj\Debug\net9.0\Futbol.Api.pdb
 C:\python-proyects\futbol-saas\api\Futbol.Api\obj\Debug\net9.0\Futbol.Api.genruntimeconfig.cache
 C:\python-proyects\futbol-saas\api\Futbol.Api\obj\Debug\net9.0\ref\Futbol.Api.dll
+C:\python-proyects\futbol-saas\api\Futbol.Api\obj\Debug\net9.0\Futbol.Api.sourcelink.json

@@ -20,6 +20,13 @@ builder.Services
     {
         opt.Password.RequireNonAlphanumeric = false;
         opt.User.RequireUniqueEmail = true;
+
+        // (Opcional) Si querés permitir passwords simples tipo "1234",
+        // descomentá estas líneas:
+        // opt.Password.RequireDigit = false;
+        // opt.Password.RequireLowercase = false;
+        // opt.Password.RequireUppercase = false;
+        // opt.Password.RequiredLength = 4;
     })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
@@ -46,33 +53,38 @@ var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
 var jwtAudience = builder.Configuration["Jwt:Audience"]!;
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(opt =>
+// ✅ CLAVE: forzar que [Authorize] use JWT (no cookie de Identity)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(opt =>
+{
+    opt.TokenValidationParameters = new TokenValidationParameters
     {
-        opt.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
-            ValidateAudience = true,
-            ValidAudience = jwtAudience,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ClockSkew = TimeSpan.FromMinutes(2)
-        };
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.FromMinutes(2)
+    };
 
-        // JWT en cookie: auth_token
-        opt.Events = new JwtBearerEvents
+    // JWT en cookie: auth_token
+    opt.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = ctx =>
         {
-            OnMessageReceived = ctx =>
-            {
-                if (ctx.Request.Cookies.TryGetValue("auth_token", out var token))
-                    ctx.Token = token;
+            if (ctx.Request.Cookies.TryGetValue("auth_token", out var token))
+                ctx.Token = token;
 
-                return Task.CompletedTask;
-            }
-        };
-    });
+            return Task.CompletedTask;
+        }
+    };
+});
 
 builder.Services.AddAuthorization();
 
@@ -107,7 +119,7 @@ app.MapGet("/debug/routes", (IEnumerable<Microsoft.AspNetCore.Routing.EndpointDa
     var routes = sources
         .SelectMany(s => s.Endpoints)
         .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
-        .Select(e => "/" + e.RoutePattern.RawText.TrimStart('/'))
+        .Select(e => "/" + (e.RoutePattern.RawText ?? "").TrimStart('/'))
         .OrderBy(x => x)
         .ToList();
 
