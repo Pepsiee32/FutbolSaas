@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FutStats Pro - Registro Completo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #052e16;
+            background-image: 
+                /* Línea central ajustada al 55% */
+                linear-gradient(to bottom, transparent 54.8%, rgba(255,255,255,0.15) 54.8%, rgba(255,255,255,0.15) 55.2%, transparent 55.2%),
+                /* Círculo central ajustado al 55% */
+                radial-gradient(circle at center 55%, transparent 14.8%, rgba(255,255,255,0.15) 15%, rgba(255,255,255,0.15) 15.5%, transparent 15.7%),
+                /* Césped */
+                repeating-linear-gradient(90deg, transparent 0, transparent 80px, rgba(0,0,0,0.1) 80px, rgba(0,0,0,0.1) 160px);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(10, 25, 10, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Estilo para el checkbox de MVP */
+        .mvp-checkbox:checked + label {
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        main { padding-bottom: 150px; }
+    </style>
+</head>
+<body class="text-white font-sans min-h-screen">
+
+    <nav class="bg-black/40 border-b border-white/10 p-4 sticky top-0 z-50 backdrop-blur-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase">Fut<span class="text-green-500">Stats</span></h1>
+            <div class="w-10 h-10 rounded-full bg-green-500 border-2 border-white/20 flex items-center justify-center font-bold text-black">LM</div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 max-w-xl">
+
+        <div id="dashboard" class="tab-content active">
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="glass-card p-4 rounded-2xl border-t-2 border-t-green-500">
+                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Partidos</p>
+                    <p class="text-3xl font-black">48</p>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-t-2 border-t-green-500">
+                    <p class="text-green-400 text-[10px] uppercase font-bold tracking-tighter">Victorias</p>
+                    <p class="text-3xl font-black text-green-400">32</p>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-t-2 border-t-white/30">
+                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Goles</p>
+                    <p class="text-3xl font-black">25</p>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-t-2 border-t-white/30">
+                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Efectividad</p>
+                    <p class="text-3xl font-black">67%</p>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-3xl mb-8">
+                <h3 class="text-sm font-bold mb-6 uppercase flex items-center tracking-widest text-green-400">
+                    <i class="fas fa-file-signature mr-2"></i>Nuevo Informe de Partido
+                </h3>
+                <form class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" placeholder="Rival / Cancha" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none focus:border-green-500">
+                        <select class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none text-gray-400">
+                            <option value="" disabled selected>Formato</option>
+                            <option>Fútbol 5</option>
+                            <option>Fútbol 7</option>
+                            <option>Fútbol 8</option>
+                            <option>Fútbol 11</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-500 text-xs italic">⚽ Goles</span>
+                            <input type="number" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 pt-7 text-sm outline-none focus:border-green-500 text-right">
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-500 text-xs italic">👟 Asist.</span>
+                            <input type="number" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 pt-7 text-sm outline-none focus:border-green-500 text-right">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 items-center">
+                        <select class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none text-gray-400">
+                            <option>Ganado</option>
+                            <option>Empatado</option>
+                            <option>Perdido</option>
+                        </select>
+                        <div class="flex items-center justify-center bg-white/5 border border-white/10 rounded-xl p-3">
+                            <input type="checkbox" id="mvp" class="hidden mvp-checkbox">
+                            <label for="mvp" class="text-xs font-bold cursor-pointer flex items-center transition-colors text-gray-500">
+                                <i class="fas fa-star mr-2"></i> ¿FUISTE MVP?
+                            </label>
+                        </div>
+                    </div>
+
+                    <textarea placeholder="Notas opcionales (ej: 'gol de chilena', 'partido chivo')" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none focus:border-green-500 h-20 resize-none"></textarea>
+
+                    <button type="button" class="w-full bg-green-500 hover:bg-green-400 text-black font-black py-4 rounded-xl uppercase text-xs tracking-[0.2em] transition-all">
+                        Guardar Partido
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="stats" class="tab-content">
+            <div class="space-y-6">
+                <div class="glass-card p-6 rounded-3xl">
+                    <h3 class="text-xs font-bold mb-6 uppercase tracking-widest text-center text-gray-400">Rendimiento Anual</h3>
+                    <div class="relative h-[250px] w-full">
+                        <canvas id="performanceChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-3xl font-black italic">67%</span>
+                            <span class="text-[9px] text-gray-400 uppercase tracking-tighter">W. Rate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl">
+                    <h3 class="text-xs font-bold mb-6 uppercase tracking-widest text-center text-gray-400">Goles Mensuales</h3>
+                    <div class="h-[250px] w-full">
+                        <canvas id="goalsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-2xl border-t border-white/5 px-10 pt-4 pb-8 z-[100] flex justify-around items-center rounded-t-3xl">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item flex flex-col items-center gap-1 transition-all text-green-500">
+            <i class="fas fa-home text-lg"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Dashboard</span>
+        </button>
+        <button onclick="switchTab('stats')" id="nav-stats" class="nav-item flex flex-col items-center gap-1 transition-all text-gray-500">
+            <i class="fas fa-chart-pie text-lg"></i>
+            <span class="text-[9px] font-bold uppercase tracking-tighter">Stats</span>
+        </button>
+    </nav>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.replace('text-green-500', 'text-gray-500'));
+            document.getElementById('nav-' + tabId).classList.replace('text-gray-500', 'text-green-500');
+            window.scrollTo(0, 0);
+        }
+
+        // Gráficos (Basados en el archivo original)
+        const config = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+
+        new Chart(document.getElementById('performanceChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['G', 'E', 'P'],
+                datasets: [{
+                    data: [32, 8, 8],
+                    backgroundColor: ['#22c55e', 'rgba(255,255,255,0.1)', '#ef4444'],
+                    borderWidth: 0,
+                    cutout: '85%'
+                }]
+            },
+            options: config
+        });
+
+        new Chart(document.getElementById('goalsChart'), {
+            type: 'bar',
+            data: {
+                labels: ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'],
+                datasets: [{
+                    data: [2, 4, 1, 5, 3, 6, 8, 4, 3, 5, 2, 4],
+                    backgroundColor: '#22c55e',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                ...config,
+                scales: {
+                    y: { display: false },
+                    x: { grid: { display: false }, ticks: { color: '#666', font: { size: 9, weight: 'bold' } } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
