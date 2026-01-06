@@ -132,4 +132,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Configurar puerto dinámico para Render y otros servicios cloud
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    app.Urls.Add($"http://0.0.0.0:{port}");
+}
+
 app.Run();

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: futbol-api
+    env: dotnet
+    buildCommand: dotnet publish -c Release -o ./publish
+    startCommand: dotnet ./publish/Futbol.Api.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      # Agregar estas variables en el dashboard de Render:
+      # - ConnectionStrings__Default
+      # - Jwt__Key
+      # - Jwt__Issuer
+      # - Jwt__Audience
+      # - Jwt__ExpiresMinutes
+      # - Cors__AllowedOrigins__0
+
