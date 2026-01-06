@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FutStats Pro - F8 Restored</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #052e16;
+            background-image: 
+                linear-gradient(to bottom, transparent 49.8%, rgba(255,255,255,0.15) 49.8%, rgba(255,255,255,0.15) 50.2%, transparent 50.2%),
+                radial-gradient(circle at center 50%, transparent 14.8%, rgba(255,255,255,0.15) 15%, rgba(255,255,255,0.15) 15.5%, transparent 15.7%),
+                repeating-linear-gradient(90deg, #052e16 0px, #052e16 100px, #063e1e 100px, #063e1e 200px);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(10, 25, 10, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tab-content, .sub-tab-content { display: none; }
+        .tab-content.active, .sub-tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        main { padding-bottom: 120px; }
+        .active-nav { color: #22c55e !important; }
+        .active-sub { border-bottom: 2px solid #22c55e; color: white !important; }
+        .achievement-card { grayscale: 100%; opacity: 0.4; transition: all 0.5s ease; }
+        .achievement-card.unlocked { grayscale: 0%; opacity: 1; border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+    </style>
+</head>
+<body class="text-white font-sans min-h-screen">
+
+    <nav class="bg-black/60 border-b border-white/10 p-4 sticky top-0 z-50 backdrop-blur-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black italic uppercase tracking-tighter">Fut<span class="text-green-500">Stats</span> PRO</h1>
+            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center font-bold text-black text-xs border border-white/20">LM</div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 max-w-xl">
+        
+        <div id="dashboard" class="tab-content active">
+            <div class="grid grid-cols-2 gap-3 mb-6" id="stats-summary"></div>
+            <div class="glass-card p-6 rounded-3xl mb-8">
+                <h3 class="text-[10px] font-black uppercase text-green-500 mb-4 tracking-widest text-center">Registrar Partido</h3>
+                <form id="matchForm" class="space-y-4">
+                    <input type="text" id="rival" placeholder="Rival / Cancha" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none focus:border-green-500" required>
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="formato" class="bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-400 outline-none">
+                            <option>Fútbol 5</option><option>Fútbol 7</option><option>Fútbol 8</option><option>Fútbol 11</option>
+                        </select>
+                        <select id="resultado" class="bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-400">
+                            <option>Ganado</option><option>Empatado</option><option>Perdido</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="goles" placeholder="Goles" class="bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none">
+                        <input type="number" id="asist" placeholder="Asist" class="bg-white/5 border border-white/10 rounded-xl p-3 text-sm outline-none">
+                    </div>
+                    <div class="flex items-center justify-center bg-white/5 border border-white/10 rounded-xl p-3">
+                        <input type="checkbox" id="mvp" class="mr-2 h-4 w-4 accent-green-500">
+                        <label for="mvp" class="text-[10px] font-black text-gray-400 uppercase">¿Fuiste el MVP?</label>
+                    </div>
+                    <button type="submit" class="w-full bg-green-500 text-black font-black py-4 rounded-xl uppercase text-xs tracking-widest">Guardar</button>
+                </form>
+            </div>
+            <div id="recent-history" class="space-y-3"></div>
+        </div>
+
+        <div id="stats" class="tab-content">
+            <div class="flex overflow-x-auto gap-2 mb-6 pb-2 no-scrollbar">
+                <button onclick="filtrar('Todos', this)" class="btn-f active bg-green-500 text-black px-5 py-2 rounded-full text-[10px] font-black uppercase">Global</button>
+                <button onclick="filtrar('Fútbol 5', this)" class="btn-f bg-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase text-white">F5</button>
+                <button onclick="filtrar('Fútbol 7', this)" class="btn-f bg-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase text-white">F7</button>
+                <button onclick="filtrar('Fútbol 8', this)" class="btn-f bg-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase text-white">F8</button>
+                <button onclick="filtrar('Fútbol 11', this)" class="btn-f bg-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase text-white">F11</button>
+            </div>
+
+            <div class="flex justify-around mb-6 border-b border-white/5">
+                <button onclick="switchSubTab('perfil')" id="sub-perfil" class="sub-nav-item active-sub pb-2 text-[10px] font-black uppercase text-gray-500">Perfil</button>
+                <button onclick="switchSubTab('ataque')" id="sub-ataque" class="sub-nav-item pb-2 text-[10px] font-black uppercase text-gray-500">Ataque</button>
+                <button onclick="switchSubTab('canchas')" id="sub-canchas" class="sub-nav-item pb-2 text-[10px] font-black uppercase text-gray-500">Canchas</button>
+            </div>
+
+            <div id="perfil" class="sub-tab-content active space-y-4">
+                <div class="glass-card p-6 rounded-3xl"><div class="h-[280px] w-full"><canvas id="radarChart"></canvas></div></div>
+                <div class="glass-card p-6 rounded-3xl text-center relative">
+                    <canvas id="performanceChart"></canvas>
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none mt-4"><span id="win-rate-text" class="text-3xl font-black">0%</span></div>
+                </div>
+            </div>
+
+            <div id="ataque" class="sub-tab-content space-y-4">
+                <div class="glass-card p-6 rounded-3xl"><h4 class="text-[10px] font-black uppercase mb-4 text-gray-500">Goles por Partido</h4><div class="h-[200px]"><canvas id="lineChart"></canvas></div></div>
+                <div class="glass-card p-6 rounded-3xl"><h4 class="text-[10px] font-black uppercase mb-4 text-gray-500">Goles vs Asistencias</h4><div class="h-[200px]"><canvas id="barChart"></canvas></div></div>
+            </div>
+
+            <div id="canchas" class="sub-tab-content space-y-4">
+                <div class="glass-card p-6 rounded-3xl space-y-6" id="canchas-list"></div>
+            </div>
+        </div>
+
+        <div id="trophies" class="tab-content">
+            <h2 class="text-center font-black italic text-xl mb-6 uppercase">Vitrina de Trofeos</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div id="logro-messi" class="achievement-card glass-card p-4 rounded-3xl text-center">
+                    <div class="text-4xl mb-2">🐐</div>
+                    <h4 class="font-black text-[10px] uppercase">Messi 2012</h4>
+                    <p class="text-[8px] text-gray-500 mb-3">91 goles.</p>
+                    <div class="bg-white/5 h-1.5 rounded-full overflow-hidden"><div id="progress-messi" class="bg-yellow-500 h-full" style="width: 0%"></div></div>
+                    <p id="label-messi" class="text-[8px] mt-1 font-bold">0 / 91</p>
+                </div>
+                <div id="logro-hattrick" class="achievement-card glass-card p-4 rounded-3xl text-center">
+                    <div class="text-4xl mb-2">⚽</div>
+                    <h4 class="font-black text-[10px] uppercase">Hat-Trick Hero</h4>
+                    <p class="text-[8px] text-gray-500 leading-tight">3+ goles.</p>
+                </div>
+                <div id="logro-invencible" class="achievement-card glass-card p-4 rounded-3xl text-center">
+                    <div class="text-4xl mb-2">🛡️</div>
+                    <h4 class="font-black text-[10px] uppercase">Invencible</h4>
+                    <p class="text-[8px] text-gray-500">5 victorias seguidas.</p>
+                    <p id="label-streak" class="text-[9px] font-black text-green-500">Racha: 0</p>
+                </div>
+                <div id="logro-mvp" class="achievement-card glass-card p-4 rounded-3xl text-center">
+                    <div class="text-4xl mb-2">⭐</div>
+                    <h4 class="font-black text-[10px] uppercase">El Elegido</h4>
+                    <p class="text-[8px] text-gray-500">Gana 10 MVPs.</p>
+                    <p id="label-mvps" class="text-[9px] font-black text-yellow-500">0 / 10</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/5 px-6 pt-4 pb-8 flex justify-around rounded-t-3xl z-[100]">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 active-nav"><i class="fas fa-th-large text-lg"></i><span class="text-[8px] font-black uppercase">Inicio</span></button>
+        <button onclick="switchTab('stats')" id="nav-stats" class="flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-chart-line text-lg"></i><span class="text-[8px] font-black uppercase">Stats</span></button>
+        <button onclick="switchTab('trophies')" id="nav-trophies" class="flex flex-col items-center gap-1 text-gray-400"><i class="fas fa-trophy text-lg"></i><span class="text-[8px] font-black uppercase">Logros</span></button>
+    </nav>
+
+    <script>
+        let partidosData = [
+            { rival: "Amigos FC", formato: "Fútbol 5", goles: 5, asist: 1, resultado: "Ganado", mvp: true },
+            { rival: "Liga Pro", formato: "Fútbol 11", goles: 1, asist: 2, resultado: "Ganado", mvp: false },
+            { rival: "Cancha 1", formato: "Fútbol 7", goles: 0, asist: 0, resultado: "Perdido", mvp: false },
+            { rival: "Dep. Norte", formato: "Fútbol 5", goles: 3, asist: 1, resultado: "Ganado", mvp: true },
+            { rival: "Inter Local", formato: "Fútbol 8", goles: 2, asist: 0, resultado: "Empatado", mvp: false },
+            { rival: "Los Galácticos", formato: "Fútbol 5", goles: 4, asist: 2, resultado: "Ganado", mvp: true },
+            { rival: "Club de Barrio", formato: "Fútbol 11", goles: 0, asist: 1, resultado: "Perdido", mvp: false },
+            { rival: "Torneo Nocturno", formato: "Fútbol 7", goles: 3, asist: 0, resultado: "Ganado", mvp: true },
+            { rival: "Pichanga FC", formato: "Fútbol 5", goles: 6, asist: 1, resultado: "Ganado", mvp: true },
+            { rival: "Final Anual", formato: "Fútbol 8", goles: 2, asist: 1, resultado: "Ganado", mvp: true }
+        ];
+
+        let charts = {};
+
+        function initApp() {
+            renderDashboard();
+            renderCanchas();
+            createCharts();
+            checkAchievements();
+        }
+
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('nav button').forEach(b => b.classList.replace('active-nav', 'text-gray-400'));
+            document.getElementById('nav-'+id).classList.add('active-nav');
+            if(id === 'stats') setTimeout(() => Object.values(charts).forEach(c => c.update()), 100);
+        }
+
+        function switchSubTab(id) {
+            document.querySelectorAll('.sub-tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sub-nav-item').forEach(b => b.classList.remove('active-sub'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('sub-'+id).classList.add('active-sub');
+            setTimeout(() => Object.values(charts).forEach(c => c.update()), 50);
+        }
+
+        function filtrar(tipo, btn) {
+            document.querySelectorAll('.btn-f').forEach(b => {
+                b.className = 'btn-f bg-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase text-white';
+            });
+            btn.className = 'btn-f bg-green-500 text-black px-5 py-2 rounded-full text-[10px] font-black uppercase';
+            const data = tipo === 'Todos' ? partidosData : partidosData.filter(p => p.formato === tipo);
+            updateAllCharts(data);
+        }
+
+        function createCharts() {
+            const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+            charts.radar = new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: getRadarData(partidosData),
+                options: { ...common, scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, angleLines: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: '#666' }, ticks: { display: false }, suggestedMin: 0, suggestedMax: 100 }}}
+            });
+            charts.perf = new Chart(document.getElementById('performanceChart'), {
+                type: 'doughnut',
+                data: getPerfData(partidosData),
+                options: { ...common, cutout: '80%' }
+            });
+            charts.line = new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: { labels: partidosData.map((_,i)=>'P'+(i+1)), datasets: [{ data: partidosData.map(p=>p.goles), borderColor: '#22c55e', fill: true, backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.4 }] },
+                options: common
+            });
+            charts.bar = new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: { labels: partidosData.map((_,i)=>'P'+(i+1)), datasets: [{ label: 'G', data: partidosData.map(p=>p.goles), backgroundColor: '#22c55e' }, { label: 'A', data: partidosData.map(p=>p.asist), backgroundColor: '#fff' }] },
+                options: common
+            });
+        }
+
+        function updateAllCharts(data) {
+            charts.radar.data = getRadarData(data);
+            charts.perf.data = getPerfData(data);
+            charts.line.data.labels = data.map((_,i) => 'P'+(i+1));
+            charts.line.data.datasets[0].data = data.map(p => p.goles);
+            charts.bar.data.labels = data.map((_,i) => 'P'+(i+1));
+            charts.bar.data.datasets[0].data = data.map(p => p.goles);
+            charts.bar.data.datasets[1].data = data.map(p => p.asist);
+            Object.values(charts).forEach(c => c.update());
+            const wins = data.filter(p => p.resultado === 'Ganado').length;
+            document.getElementById('win-rate-text').innerText = data.length > 0 ? ((wins / data.length) * 100).toFixed(0) + "%" : "0%";
+        }
+
+        function getRadarData(data) {
+            const count = data.length || 1;
+            return {
+                labels: ['GOLES', 'ASIST', 'WINS', 'MVP', 'FORMA'],
+                datasets: [{
+                    data: [(data.reduce((s,p)=>s+p.goles,0)/count)*25, (data.reduce((s,p)=>s+p.asist,0)/count)*25, (data.filter(p=>p.resultado==='Ganado').length/count)*100, (data.filter(p=>p.mvp).length/count)*100, 85],
+                    backgroundColor: 'rgba(34,197,94,0.2)', borderColor: '#22c55e', borderWidth: 2
+                }]
+            };
+        }
+
+        function getPerfData(data) {
+            return {
+                labels: ['W','D','L'],
+                datasets: [{ data: [data.filter(p=>p.resultado==='Ganado').length, data.filter(p=>p.resultado==='Empatado').length, data.filter(p=>p.resultado==='Perdido').length], backgroundColor: ['#22c55e', '#333', '#ef4444'], borderWidth: 0 }]
+            };
+        }
+
+        function renderDashboard() {
+            const goles = partidosData.reduce((s,p) => s+p.goles, 0);
+            document.getElementById('stats-summary').innerHTML = `
+                <div class="glass-card p-4 text-center rounded-2xl border-t-2 border-green-500"><p class="text-[8px] text-gray-500 uppercase font-bold">Goles Totales</p><p class="text-2xl font-black text-green-500">${goles}</p></div>
+                <div class="glass-card p-4 text-center rounded-2xl border-t-2 border-white/20"><p class="text-[8px] text-gray-500 uppercase font-bold">Partidos</p><p class="text-2xl font-black">${partidosData.length}</p></div>
+            `;
+            document.getElementById('recent-history').innerHTML = partidosData.slice(-3).reverse().map(p => `
+                <div class="glass-card p-4 rounded-2xl flex justify-between items-center border-l-4 ${p.resultado==='Ganado'?'border-l-green-500': p.resultado==='Empatado'?'border-l-gray-500':'border-l-red-500'}">
+                    <div><p class="font-bold text-sm italic uppercase">${p.rival}</p><p class="text-[9px] text-gray-500">${p.formato}</p></div>
+                    <div class="text-right font-black italic text-sm text-green-500">⚽${p.goles} 👟${p.asist}</div>
+                </div>`).join('');
+        }
+
+        function renderCanchas() {
+            const formatos = ['Fútbol 5', 'Fútbol 7', 'Fútbol 8', 'Fútbol 11'];
+            document.getElementById('canchas-list').innerHTML = formatos.map(f => {
+                const matches = partidosData.filter(p => p.formato === f);
+                const wins = matches.filter(p => p.resultado === 'Ganado').length;
+                const perc = matches.length > 0 ? (wins/matches.length*100).toFixed(0) : 0;
+                return `<div class="space-y-1">
+                    <div class="flex justify-between text-[10px] font-bold uppercase"><span class="text-gray-300">${f}</span><span class="text-green-500">${perc}% Win Rate</span></div>
+                    <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden"><div class="bg-green-500 h-full" style="width: ${perc}%"></div></div>
+                    <p class="text-[8px] text-gray-500">${matches.length} jugados</p>
+                </div>`;
+            }).join('');
+        }
+
+        function checkAchievements() {
+            const totalGoles = partidosData.reduce((s,p) => s+p.goles, 0);
+            const totalMVPs = partidosData.filter(p => p.mvp).length;
+            document.getElementById('progress-messi').style.width = Math.min((totalGoles / 91) * 100, 100) + "%";
+            document.getElementById('label-messi').innerText = `${totalGoles} / 91`;
+            if(totalGoles >= 91) document.getElementById('logro-messi').classList.add('unlocked');
+            if(partidosData.some(p => p.goles >= 3)) document.getElementById('logro-hattrick').classList.add('unlocked');
+            document.getElementById('label-mvps').innerText = `${totalMVPs} / 10`;
+            if(totalMVPs >= 10) document.getElementById('logro-mvp').classList.add('unlocked');
+            let racha = 0;
+            for(let i = partidosData.length-1; i >= 0; i--) { if(partidosData[i].resultado === 'Ganado') racha++; else break; }
+            document.getElementById('label-streak').innerText = `Racha: ${racha}`;
+            if(racha >= 5) document.getElementById('logro-invencible').classList.add('unlocked');
+        }
+
+        document.getElementById('matchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nuevo = {
+                rival: document.getElementById('rival').value,
+                formato: document.getElementById('formato').value,
+                goles: parseInt(document.getElementById('goles').value) || 0,
+                asist: parseInt(document.getElementById('asist').value) || 0,
+                resultado: document.getElementById('resultado').value,
+                mvp: document.getElementById('mvp').checked
+            };
+            partidosData.push(nuevo);
+            this.reset();
+            renderDashboard(); renderCanchas(); updateAllCharts(partidosData); checkAchievements();
+        });
+
+        initApp();
+    </script>
+</body>
+</html>
