@@ -91,8 +91,11 @@ builder.Services.AddAuthorization();
 // CORS para Next.js
 builder.Services.AddCors(opt =>
 {
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? new[] { "http://localhost:3000" };
+
     opt.AddPolicy("web", p =>
-        p.WithOrigins("http://localhost:3000")
+        p.WithOrigins(allowedOrigins)
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials());
@@ -111,20 +114,22 @@ app.MapControllers();
 
 app.MapGet("/ping", () => Results.Ok("ok"));
 
-// --- DEBUG (si querés, después borrás estos 2) ---
-app.MapGet("/debug/matches", () => "matches route alive");
-
-app.MapGet("/debug/routes", (IEnumerable<Microsoft.AspNetCore.Routing.EndpointDataSource> sources) =>
+// Debug endpoints solo en desarrollo
+if (app.Environment.IsDevelopment())
 {
-    var routes = sources
-        .SelectMany(s => s.Endpoints)
-        .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
-        .Select(e => "/" + (e.RoutePattern.RawText ?? "").TrimStart('/'))
-        .OrderBy(x => x)
-        .ToList();
+    app.MapGet("/debug/matches", () => "matches route alive");
 
-    return Results.Ok(routes);
-});
-// -----------------------------------------------
+    app.MapGet("/debug/routes", (IEnumerable<Microsoft.AspNetCore.Routing.EndpointDataSource> sources) =>
+    {
+        var routes = sources
+            .SelectMany(s => s.Endpoints)
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Select(e => "/" + (e.RoutePattern.RawText ?? "").TrimStart('/'))
+            .OrderBy(x => x)
+            .ToList();
+
+        return Results.Ok(routes);
+    });
+}
 
 app.Run();

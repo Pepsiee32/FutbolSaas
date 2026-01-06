@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using Futbol.Api.DTOs;
 using Futbol.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -16,25 +17,42 @@ public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _users;
     private readonly IConfiguration _cfg;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(UserManager<ApplicationUser> users, IConfiguration cfg)
+    public AuthController(UserManager<ApplicationUser> users, IConfiguration cfg, IWebHostEnvironment env)
     {
         _users = users;
         _cfg = cfg;
+        _env = env;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
+        if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+            return BadRequest(new { message = "Email y contraseña son requeridos" });
+
+        // Validación básica de email
+        var emailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase);
+        if (!emailRegex.IsMatch(req.Email))
+            return BadRequest(new { message = "El formato del email no es válido" });
+
+        // Sanitizar email (trim y lowercase)
+        var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
+
         var user = new ApplicationUser
         {
-            UserName = req.Email,
-            Email = req.Email
+            UserName = sanitizedEmail,
+            Email = sanitizedEmail
         };
 
         var result = await _users.CreateAsync(user, req.Password);
         if (!result.Succeeded)
-            return BadRequest(result.Errors);
+        {
+            // Devolver errores en formato que el frontend pueda parsear
+            var errors = result.Errors.Select(e => new { code = e.Code, description = e.Description }).ToArray();
+            return BadRequest(new { errors });
+        }
 
         return Ok();
     }
@@ -55,12 +73,15 @@ public class AuthController : ControllerBase
 
         var token = CreateJwt(user);
 
+        var isProduction = _env.IsProduction();
+
         Response.Cookies.Append("auth_token", token, new CookieOptions
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,
-            Secure = false, // en local http
-            Path = "/"
+            Secure = isProduction, // Secure solo en producción (HTTPS)
+            Path = "/",
+            MaxAge = TimeSpan.FromMinutes(int.Parse(_cfg["Jwt:ExpiresMinutes"]!))
         });
 
         return Ok(new { message = "Login exitoso" });
