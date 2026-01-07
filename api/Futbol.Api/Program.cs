@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 // Identity (usuarios)
 builder.Services
