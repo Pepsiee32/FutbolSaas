@@ -88,14 +88,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// CORS para Next.js
 builder.Services.AddCors(opt =>
 {
-    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-        ?? new[] { "http://localhost:3000" };
-
     opt.AddPolicy("web", p =>
-        p.WithOrigins(allowedOrigins)
+        p.WithOrigins("http://localhost:3000", "https://statsfutbolpro.vercel.app") // Agregamos Vercel aquí
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials());
