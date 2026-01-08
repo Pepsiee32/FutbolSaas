@@ -58,6 +58,15 @@ cd api/Futbol.Api
 dotnet ef database update
 ```
 
+**⚠️ IMPORTANTE**: Las migraciones se ejecutarán contra tu base de datos **remota en Neon**, no contra una base de datos local. La cadena de conexión en `appsettings.json` apunta directamente a Neon.
+
+**Alternativa**: Puedes usar el script automatizado:
+```powershell
+.\instalar-y-ejecutar-migraciones.ps1
+```
+
+Ver más detalles en: `EJECUTAR_MIGRACIONES_REMOTAS.md`
+
 ### 3. Iniciar el backend
 ```bash
 # Desde api/Futbol.Api
