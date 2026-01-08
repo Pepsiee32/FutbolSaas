@@ -70,6 +70,10 @@ export async function api<T>(
     try {
       const data = (await res.json()) as ApiErrorBody;
       detail = parseErrorMessage(data);
+      // Si hay un campo 'error' en la respuesta, usarlo (para errores 500 con mensaje)
+      if (typeof data === "object" && "error" in data && data.error) {
+        detail = data.error as string;
+      }
     } catch {
       // Si no se puede parsear, usar el status
       if (res.status === 400) {

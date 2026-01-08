@@ -125,27 +125,6 @@ var app = builder.Build();
 // CORS debe estar ANTES de cualquier otro middleware
 app.UseCors("web");
 
-// Manejo de errores que también respeta CORS
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        // Asegurar que los headers CORS estén presentes incluso en errores
-        var corsService = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
-        var corsPolicyProvider = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>();
-        var policy = await corsPolicyProvider.GetPolicyAsync(context, "web");
-        if (policy != null)
-        {
-            var corsResult = corsService.EvaluatePolicy(context, policy);
-            corsService.ApplyResult(corsResult, context.Response);
-        }
-        
-        context.Response.StatusCode = 500;
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync("{\"error\":\"Internal server error\"}");
-    });
-});
-
 // app.UseHttpsRedirection();
 
 app.UseAuthentication();
