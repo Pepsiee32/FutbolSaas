@@ -21,7 +21,7 @@ namespace Futbol.Api.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "Location",
                 table: "Matches",
-                type: "nvarchar(max)",
+                type: "text",
                 nullable: true);
         }
     }

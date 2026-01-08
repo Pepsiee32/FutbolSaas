@@ -13,14 +13,14 @@ namespace Futbol.Api.Migrations
             migrationBuilder.AddColumn<bool>(
                 name: "IsMvp",
                 table: "Matches",
-                type: "bit",
+                type: "boolean",
                 nullable: false,
                 defaultValue: false);
 
             migrationBuilder.AddColumn<int>(
                 name: "Result",
                 table: "Matches",
-                type: "int",
+                type: "integer",
                 nullable: true);
         }
 
