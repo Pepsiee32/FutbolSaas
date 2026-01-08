@@ -88,13 +88,30 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Configurar CORS - leer orígenes desde configuración y agregar dominios de Vercel
+var configOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+    ?? new[] { "http://localhost:3000" };
+
+// Agregar todos los dominios de Vercel conocidos
+var allOrigins = new List<string>(configOrigins)
+{
+    "http://localhost:3000",
+    "https://statsfutbolpro.vercel.app",
+    "https://futbol-saas-posta.vercel.app"
+};
+
+// Remover duplicados
+var uniqueOrigins = allOrigins.Distinct().ToArray();
+
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("web", p =>
-        p.WithOrigins("http://localhost:3000", "https://statsfutbolpro.vercel.app", "https://futbol-saas-posta.vercel.app")
+    {
+        p.WithOrigins(uniqueOrigins)
          .AllowAnyHeader()
          .AllowAnyMethod()
-         .AllowCredentials());
+         .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
