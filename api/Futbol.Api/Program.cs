@@ -49,9 +49,15 @@ builder.Services.ConfigureApplicationCookie(opt =>
 });
 
 // JWT (validación + lectura desde cookie)
-var jwtKey = builder.Configuration["Jwt:Key"]!;
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
-var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+var jwtKey = builder.Configuration["Jwt:Key"] 
+    ?? builder.Configuration["JWT_KEY"]
+    ?? "PRODUCTION_CHANGE_ME_TO_A_SECURE_RANDOM_KEY_AT_LEAST_32_CHARACTERS_LONG";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] 
+    ?? builder.Configuration["JWT_ISSUER"]
+    ?? "Futbol.Api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] 
+    ?? builder.Configuration["JWT_AUDIENCE"]
+    ?? "Futbol.Web";
 
 // ✅ CLAVE: forzar que [Authorize] use JWT (no cookie de Identity)
 builder.Services.AddAuthentication(options =>
@@ -118,6 +124,27 @@ var app = builder.Build();
 
 // CORS debe estar ANTES de cualquier otro middleware
 app.UseCors("web");
+
+// Manejo de errores que también respeta CORS
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        // Asegurar que los headers CORS estén presentes incluso en errores
+        var corsService = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
+        var corsPolicyProvider = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>();
+        var policy = await corsPolicyProvider.GetPolicyAsync(context, "web");
+        if (policy != null)
+        {
+            var corsResult = corsService.EvaluatePolicy(context, policy);
+            corsService.ApplyResult(corsResult, context.Response);
+        }
+        
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"error\":\"Internal server error\"}");
+    });
+});
 
 // app.UseHttpsRedirection();
 
