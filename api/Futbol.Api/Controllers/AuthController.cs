@@ -63,7 +63,10 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest(new { message = "Email y contraseña son requeridos" });
 
-        var user = await _users.FindByEmailAsync(req.Email);
+        // Sanitizar email (trim y lowercase) para que coincida con Register
+        var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
+
+        var user = await _users.FindByEmailAsync(sanitizedEmail);
         if (user is null) 
             return Unauthorized(new { message = "Usuario no encontrado" });
 

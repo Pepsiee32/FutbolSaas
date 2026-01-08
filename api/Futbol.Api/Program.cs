@@ -91,7 +91,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("web", p =>
-        p.WithOrigins("http://localhost:3000", "https://statsfutbolpro.vercel.app") // Agregamos Vercel aquí
+        p.WithOrigins("http://localhost:3000", "https://statsfutbolpro.vercel.app", "https://futbol-saas-posta.vercel.app")
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials());
