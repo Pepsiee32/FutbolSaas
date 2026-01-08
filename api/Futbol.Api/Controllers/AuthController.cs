@@ -98,12 +98,23 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Log del error para debugging
-            return StatusCode(500, new { 
+            // Log del error para debugging - siempre mostrar el mensaje en producción también
+            var errorResponse = new { 
                 message = "Error interno del servidor", 
                 error = ex.Message,
-                stackTrace = _env.IsDevelopment() ? ex.StackTrace : null
-            });
+                innerException = ex.InnerException?.Message,
+                type = ex.GetType().Name
+            };
+            
+            // Log en consola del servidor (aparecerá en Render logs)
+            Console.WriteLine($"ERROR en Login: {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+            }
+            
+            return StatusCode(500, errorResponse);
         }
     }
 
