@@ -122,7 +122,55 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-// CORS debe estar ANTES de cualquier otro middleware
+// Exception handler global - DEBE estar PRIMERO para capturar todos los errores
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        // Asegurar que los headers CORS estén presentes incluso en errores
+        var corsService = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
+        var corsPolicyProvider = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>();
+        var policy = await corsPolicyProvider.GetPolicyAsync(context, "web");
+        if (policy != null)
+        {
+            var corsResult = corsService.EvaluatePolicy(context, policy);
+            corsService.ApplyResult(corsResult, context.Response);
+        }
+        
+        // Obtener el error real si existe
+        var exceptionHandler = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var exception = exceptionHandler?.Error;
+        
+        var errorMessage = exception != null ? exception.Message : "Internal server error";
+        var errorType = exception != null ? exception.GetType().Name : "UnknownException";
+        var innerException = exception?.InnerException?.Message;
+        
+        // Log en consola del servidor (aparecerá en Render logs)
+        Console.WriteLine($"ERROR GLOBAL: {errorMessage}");
+        Console.WriteLine($"Type: {errorType}");
+        if (exception != null)
+        {
+            Console.WriteLine($"Stack Trace: {exception.StackTrace}");
+        }
+        if (!string.IsNullOrEmpty(innerException))
+        {
+            Console.WriteLine($"Inner Exception: {innerException}");
+        }
+        
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        
+        var errorResponse = System.Text.Json.JsonSerializer.Serialize(new { 
+            error = errorMessage,
+            type = errorType,
+            innerException = innerException
+        });
+        
+        await context.Response.WriteAsync(errorResponse);
+    });
+});
+
+// CORS debe estar ANTES de cualquier otro middleware (excepto exception handler)
 app.UseCors("web");
 
 // app.UseHttpsRedirection();
