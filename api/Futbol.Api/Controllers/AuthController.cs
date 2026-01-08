@@ -78,13 +78,18 @@ public class AuthController : ControllerBase
 
         var isProduction = _env.IsProduction();
 
+        var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] 
+            ?? _cfg["JWT_EXPIRES_MINUTES"]
+            ?? "4320";
+        var expiresMin = int.Parse(expiresMinStr);
+        
         Response.Cookies.Append("auth_token", token, new CookieOptions
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,
             Secure = isProduction, // Secure solo en producción (HTTPS)
             Path = "/",
-            MaxAge = TimeSpan.FromMinutes(int.Parse(_cfg["Jwt:ExpiresMinutes"]!))
+            MaxAge = TimeSpan.FromMinutes(expiresMin)
         });
 
         return Ok(new { message = "Login exitoso" });
@@ -108,10 +113,19 @@ public class AuthController : ControllerBase
 
     private string CreateJwt(ApplicationUser user)
     {
-        var key = _cfg["Jwt:Key"]!;
-        var issuer = _cfg["Jwt:Issuer"]!;
-        var audience = _cfg["Jwt:Audience"]!;
-        var expiresMin = int.Parse(_cfg["Jwt:ExpiresMinutes"]!);
+        var key = _cfg["Jwt:Key"] 
+            ?? _cfg["JWT_KEY"]
+            ?? "PRODUCTION_CHANGE_ME_TO_A_SECURE_RANDOM_KEY_AT_LEAST_32_CHARACTERS_LONG";
+        var issuer = _cfg["Jwt:Issuer"] 
+            ?? _cfg["JWT_ISSUER"]
+            ?? "Futbol.Api";
+        var audience = _cfg["Jwt:Audience"] 
+            ?? _cfg["JWT_AUDIENCE"]
+            ?? "Futbol.Web";
+        var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] 
+            ?? _cfg["JWT_EXPIRES_MINUTES"]
+            ?? "4320";
+        var expiresMin = int.Parse(expiresMinStr);
 
         var claims = new[]
         {
