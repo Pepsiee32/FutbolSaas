@@ -116,6 +116,7 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
+// CORS debe estar ANTES de cualquier otro middleware
 app.UseCors("web");
 
 // app.UseHttpsRedirection();
