@@ -60,39 +60,51 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
-            return BadRequest(new { message = "Email y contraseña son requeridos" });
-
-        // Sanitizar email (trim y lowercase) para que coincida con Register
-        var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
-
-        var user = await _users.FindByEmailAsync(sanitizedEmail);
-        if (user is null) 
-            return Unauthorized(new { message = "Usuario no encontrado" });
-
-        var ok = await _users.CheckPasswordAsync(user, req.Password);
-        if (!ok) 
-            return Unauthorized(new { message = "Contraseña incorrecta" });
-
-        var token = CreateJwt(user);
-
-        var isProduction = _env.IsProduction();
-
-        var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] 
-            ?? _cfg["JWT_EXPIRES_MINUTES"]
-            ?? "4320";
-        var expiresMin = int.Parse(expiresMinStr);
-        
-        Response.Cookies.Append("auth_token", token, new CookieOptions
+        try
         {
-            HttpOnly = true,
-            SameSite = SameSiteMode.Lax,
-            Secure = isProduction, // Secure solo en producción (HTTPS)
-            Path = "/",
-            MaxAge = TimeSpan.FromMinutes(expiresMin)
-        });
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+                return BadRequest(new { message = "Email y contraseña son requeridos" });
 
-        return Ok(new { message = "Login exitoso" });
+            // Sanitizar email (trim y lowercase) para que coincida con Register
+            var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
+
+            var user = await _users.FindByEmailAsync(sanitizedEmail);
+            if (user is null) 
+                return Unauthorized(new { message = "Usuario no encontrado" });
+
+            var ok = await _users.CheckPasswordAsync(user, req.Password);
+            if (!ok) 
+                return Unauthorized(new { message = "Contraseña incorrecta" });
+
+            var token = CreateJwt(user);
+
+            var isProduction = _env.IsProduction();
+
+            var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] 
+                ?? _cfg["JWT_EXPIRES_MINUTES"]
+                ?? "4320";
+            var expiresMin = int.Parse(expiresMinStr);
+            
+            Response.Cookies.Append("auth_token", token, new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = isProduction, // Secure solo en producción (HTTPS)
+                Path = "/",
+                MaxAge = TimeSpan.FromMinutes(expiresMin)
+            });
+
+            return Ok(new { message = "Login exitoso" });
+        }
+        catch (Exception ex)
+        {
+            // Log del error para debugging
+            return StatusCode(500, new { 
+                message = "Error interno del servidor", 
+                error = ex.Message,
+                stackTrace = _env.IsDevelopment() ? ex.StackTrace : null
+            });
+        }
     }
 
     [Authorize]
