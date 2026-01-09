@@ -131,7 +131,10 @@ public class AuthController : ControllerBase
 
                 _logger.LogInformation("Login exitoso para: {Email}. Cookie configurada: SameSite={SameSite}, Secure={Secure}", 
                     sanitizedEmail, cookieOptions.SameSite, cookieOptions.Secure);
-                return Ok(new { message = "Login exitoso" });
+                
+                // Retornar el token en la respuesta como fallback para móviles (especialmente Safari iOS)
+                // El frontend lo usará si la cookie no funciona
+                return Ok(new { token });
             }
             catch (Exception ex)
             {
@@ -150,8 +153,26 @@ public class AuthController : ControllerBase
     [HttpGet("me")]
     public IActionResult Me()
     {
+        // Logging para debugging
+        var hasCookie = Request.Cookies.TryGetValue("auth_token", out var cookieToken);
+        _logger.LogInformation("Me endpoint llamado. Cookie presente: {HasCookie}, User autenticado: {IsAuthenticated}, Path: {Path}", 
+            hasCookie, User.Identity?.IsAuthenticated ?? false, Request.Path);
+        
+        if (!hasCookie)
+        {
+            _logger.LogWarning("Me endpoint: Cookie 'auth_token' NO presente en request. Cookies disponibles: {Cookies}", 
+                string.Join(", ", Request.Cookies.Keys));
+        }
+        
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
         var email  = User.FindFirstValue(ClaimTypes.Email) ?? "";
+        
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
+        {
+            _logger.LogError("Me endpoint: Usuario autenticado pero claims vacíos. UserId: {UserId}, Email: {Email}", userId, email);
+            return Unauthorized(new { message = "Token inválido o expirado" });
+        }
+        
         return Ok(new { id = userId, email });
     }
 

@@ -58,9 +58,25 @@ export async function api<T>(
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
   body?: unknown
 ): Promise<T> {
+  // Obtener token de backup para móviles (fallback si la cookie no funciona)
+  const backupToken = typeof window !== "undefined" 
+    ? localStorage.getItem("auth_token_backup") 
+    : null;
+
+  const headers: HeadersInit = {};
+  
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Agregar token en header como fallback para móviles
+  if (backupToken && (path.includes("/auth/me") || path.includes("/matches"))) {
+    headers["Authorization"] = `Bearer ${backupToken}`;
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
     credentials: "include", // IMPORTANT: manda/recibe cookie auth_token
   });
@@ -87,9 +103,12 @@ export async function api<T>(
     throw new Error(detail);
   }
 
-  // Si viene vacío (login/register devuelven 200 sin body)
+  // Obtener el texto de la respuesta
   const text = await res.text();
+  
+  // Si viene vacío (algunos endpoints como register pueden devolver 200 sin body)
   if (!text) return {} as T;
 
+  // Parsear JSON
   return JSON.parse(text) as T;
 }

@@ -85,8 +85,28 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = ctx =>
         {
-            if (ctx.Request.Cookies.TryGetValue("auth_token", out var token))
+            var hasCookie = ctx.Request.Cookies.TryGetValue("auth_token", out var token);
+            if (hasCookie && !string.IsNullOrEmpty(token))
+            {
                 ctx.Token = token;
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("JWT Bearer: Cookie 'auth_token' encontrada en request a {Path}", ctx.Request.Path);
+            }
+            else
+            {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("JWT Bearer: Cookie 'auth_token' NO encontrada en request a {Path}. Cookies disponibles: {Cookies}", 
+                    ctx.Request.Path, string.Join(", ", ctx.Request.Cookies.Keys));
+                
+                // Intentar leer desde header como fallback (útil para móviles)
+                var authHeader = ctx.Request.Headers["Authorization"].ToString();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var headerToken = authHeader.Substring("Bearer ".Length).Trim();
+                    ctx.Token = headerToken;
+                    logger.LogInformation("JWT Bearer: Token encontrado en header Authorization");
+                }
+            }
 
             return Task.CompletedTask;
         }
