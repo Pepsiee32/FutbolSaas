@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 
 namespace Futbol.Api.Controllers;
 
@@ -18,12 +19,14 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _users;
     private readonly IConfiguration _cfg;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(UserManager<ApplicationUser> users, IConfiguration cfg, IWebHostEnvironment env)
+    public AuthController(UserManager<ApplicationUser> users, IConfiguration cfg, IWebHostEnvironment env, ILogger<AuthController> logger)
     {
         _users = users;
         _cfg = cfg;
         _env = env;
+        _logger = logger;
     }
 
     [HttpPost("register")]
@@ -60,35 +63,78 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
-            return BadRequest(new { message = "Email y contraseña son requeridos" });
-
-        // Sanitizar email (trim y lowercase) para que coincida con Register
-        var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
-
-        var user = await _users.FindByEmailAsync(sanitizedEmail);
-        if (user is null) 
-            return Unauthorized(new { message = "Usuario no encontrado" });
-
-        var ok = await _users.CheckPasswordAsync(user, req.Password);
-        if (!ok) 
-            return Unauthorized(new { message = "Contraseña incorrecta" });
-
-        var token = CreateJwt(user);
-
-        var isProduction = _env.IsProduction();
-        var isHttps = Request.IsHttps || isProduction;
-
-        Response.Cookies.Append("auth_token", token, new CookieOptions
+        try
         {
-            HttpOnly = true,
-            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None para HTTPS cross-origin
-            Secure = isHttps, // Secure en HTTPS
-            Path = "/",
-            MaxAge = TimeSpan.FromMinutes(int.Parse(_cfg["Jwt:ExpiresMinutes"] ?? "4320"))
-        });
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+                return BadRequest(new { message = "Email y contraseña son requeridos" });
 
-        return Ok(new { message = "Login exitoso" });
+            // Sanitizar email (trim y lowercase) para que coincida con Register
+            var sanitizedEmail = req.Email.Trim().ToLowerInvariant();
+
+            _logger.LogInformation("Intentando login para: {Email}", sanitizedEmail);
+
+            var user = await _users.FindByEmailAsync(sanitizedEmail);
+            if (user is null)
+            {
+                _logger.LogWarning("Usuario no encontrado: {Email}", sanitizedEmail);
+                return Unauthorized(new { message = "Usuario no encontrado" });
+            }
+
+            var ok = await _users.CheckPasswordAsync(user, req.Password);
+            if (!ok)
+            {
+                _logger.LogWarning("Contraseña incorrecta para: {Email}", sanitizedEmail);
+                return Unauthorized(new { message = "Contraseña incorrecta" });
+            }
+
+            _logger.LogInformation("Credenciales válidas, creando JWT para: {Email}", sanitizedEmail);
+
+            string token;
+            try
+            {
+                token = CreateJwt(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear JWT para: {Email}", sanitizedEmail);
+                return StatusCode(500, new { message = "Error al generar token de autenticación" });
+            }
+
+            var isProduction = _env.IsProduction();
+            // En Render y otros servicios cloud, verificar headers de proxy para HTTPS
+            var isHttps = Request.IsHttps 
+                || Request.Headers["X-Forwarded-Proto"].ToString().Equals("https", StringComparison.OrdinalIgnoreCase)
+                || isProduction;
+
+            _logger.LogInformation("Configurando cookie. IsProduction: {IsProd}, IsHttps: {IsHttps}", isProduction, isHttps);
+
+            try
+            {
+                var expiresMinutes = int.Parse(_cfg["Jwt:ExpiresMinutes"] ?? _cfg["JWT_EXPIRES_MINUTES"] ?? "4320");
+                
+                Response.Cookies.Append("auth_token", token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None para HTTPS cross-origin
+                    Secure = isHttps, // Secure en HTTPS
+                    Path = "/",
+                    MaxAge = TimeSpan.FromMinutes(expiresMinutes)
+                });
+
+                _logger.LogInformation("Login exitoso para: {Email}", sanitizedEmail);
+                return Ok(new { message = "Login exitoso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al establecer cookie para: {Email}", sanitizedEmail);
+                return StatusCode(500, new { message = "Error al establecer sesión" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado en Login");
+            return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+        }
     }
 
     [Authorize]
@@ -104,7 +150,10 @@ public class AuthController : ControllerBase
     public IActionResult Logout()
     {
         var isProduction = _env.IsProduction();
-        var isHttps = Request.IsHttps || isProduction;
+        // En Render y otros servicios cloud, verificar headers de proxy para HTTPS
+        var isHttps = Request.IsHttps 
+            || Request.Headers["X-Forwarded-Proto"].ToString().Equals("https", StringComparison.OrdinalIgnoreCase)
+            || isProduction;
 
         Response.Cookies.Delete("auth_token", new CookieOptions
         {
@@ -121,6 +170,16 @@ public class AuthController : ControllerBase
         var key = _cfg["Jwt:Key"] 
             ?? _cfg["JWT_KEY"]
             ?? throw new InvalidOperationException("JWT Key no configurada");
+        
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException("JWT Key está vacía");
+        
+        if (key.Length < 32)
+        {
+            _logger.LogWarning("JWT Key tiene menos de 32 caracteres. Longitud: {Length}", key.Length);
+            // En producción, esto debería ser un error, pero por ahora solo logueamos
+        }
+
         var issuer = _cfg["Jwt:Issuer"] 
             ?? _cfg["JWT_ISSUER"]
             ?? "Futbol.Api";
@@ -128,26 +187,47 @@ public class AuthController : ControllerBase
             ?? _cfg["JWT_AUDIENCE"]
             ?? "Futbol.Web";
         var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] ?? _cfg["JWT_EXPIRES_MINUTES"] ?? "4320";
-        var expiresMin = int.Parse(expiresMinStr);
+        
+        if (!int.TryParse(expiresMinStr, out var expiresMin))
+        {
+            _logger.LogWarning("No se pudo parsear ExpiresMinutes: {Value}, usando 4320 por defecto", expiresMinStr);
+            expiresMin = 4320;
+        }
+
+        if (string.IsNullOrWhiteSpace(user.Id))
+            throw new InvalidOperationException("User Id no puede estar vacío");
+        
+        if (string.IsNullOrWhiteSpace(user.Email))
+            throw new InvalidOperationException("User Email no puede estar vacío");
 
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email!)
+            new Claim(ClaimTypes.Email, user.Email)
         };
 
-        var creds = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
-            SecurityAlgorithms.HmacSha256);
+        try
+        {
+            var keyBytes = Encoding.UTF8.GetBytes(key);
+            var creds = new SigningCredentials(
+                new SymmetricSecurityKey(keyBytes),
+                SecurityAlgorithms.HmacSha256);
 
-        var jwt = new JwtSecurityToken(
-            issuer,
-            audience,
-            claims,
-            expires: DateTime.UtcNow.AddMinutes(expiresMin),
-            signingCredentials: creds
-        );
+            var jwt = new JwtSecurityToken(
+                issuer,
+                audience,
+                claims,
+                expires: DateTime.UtcNow.AddMinutes(expiresMin),
+                signingCredentials: creds
+            );
 
-        return new JwtSecurityTokenHandler().WriteToken(jwt);
+            return new JwtSecurityTokenHandler().WriteToken(jwt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear JWT. Key length: {KeyLength}, Issuer: {Issuer}, Audience: {Audience}", 
+                key.Length, issuer, audience);
+            throw;
+        }
     }
 }

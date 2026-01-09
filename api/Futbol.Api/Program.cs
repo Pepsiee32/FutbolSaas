@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -130,6 +131,15 @@ app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
     {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        var exceptionHandler = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var exception = exceptionHandler?.Error;
+
+        if (exception != null)
+        {
+            logger.LogError(exception, "Error no manejado: {Message}", exception.Message);
+        }
+
         // Asegurar que los headers CORS estén presentes incluso en errores
         var corsService = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsService>();
         var corsPolicyProvider = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider>();
@@ -142,7 +152,13 @@ app.UseExceptionHandler(errorApp =>
         
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync("{\"error\":\"Internal server error\"}");
+        
+        var isDevelopment = app.Environment.IsDevelopment();
+        var errorMessage = isDevelopment && exception != null
+            ? $"{{\"error\":\"Internal server error\",\"message\":\"{exception.Message}\",\"type\":\"{exception.GetType().Name}\"}}"
+            : "{\"error\":\"Internal server error\"}";
+        
+        await context.Response.WriteAsync(errorMessage);
     });
 });
 
