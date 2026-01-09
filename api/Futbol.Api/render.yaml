@@ -10,7 +10,7 @@ services:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: Jwt__Key
-        value: PRODUCTION_CHANGE_ME_TO_A_SECURE_RANDOM_KEY_AT_LEAST_32_CHARACTERS_LONG
+        value: q7xe7+ekXfqEps7GRJeBw7yApqo8WZLKNttuC2Kr1Rv/Xq3J5FbD/w9JSxdYUK0j12FHORhzyQhi17CvXM4/Xg==
       - key: Jwt__Issuer
         value: Futbol.Api
       - key: Jwt__Audience

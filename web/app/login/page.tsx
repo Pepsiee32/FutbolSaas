@@ -25,8 +25,12 @@ export default function LoginPage() {
       setLoading(true);
       setMsg("Iniciando sesión...");
       await login(email, password);
+      setMsg("Verificando sesión...");
+      // Pequeño delay para asegurar que la cookie esté disponible
+      await new Promise(resolve => setTimeout(resolve, 500));
       setMsg("OK ✅");
-      router.push("/");
+      // Usar replace en vez de push para evitar que el usuario pueda volver atrás
+      router.replace("/");
     } catch (e: any) {
       setMsg(`Error ❌ ${e.message ?? e}`);
     } finally {

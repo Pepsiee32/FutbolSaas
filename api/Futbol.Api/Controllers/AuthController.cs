@@ -102,11 +102,13 @@ public class AuthController : ControllerBase
 
             var isProduction = _env.IsProduction();
             // En Render y otros servicios cloud, verificar headers de proxy para HTTPS
+            var forwardedProto = Request.Headers["X-Forwarded-Proto"].ToString();
             var isHttps = Request.IsHttps 
-                || Request.Headers["X-Forwarded-Proto"].ToString().Equals("https", StringComparison.OrdinalIgnoreCase)
-                || isProduction;
+                || (!string.IsNullOrEmpty(forwardedProto) && forwardedProto.Equals("https", StringComparison.OrdinalIgnoreCase))
+                || isProduction; // En producción, asumir HTTPS
 
-            _logger.LogInformation("Configurando cookie. IsProduction: {IsProd}, IsHttps: {IsHttps}", isProduction, isHttps);
+            _logger.LogInformation("Configurando cookie. IsProduction: {IsProd}, IsHttps: {IsHttps}, ForwardedProto: {ForwardedProto}, Request.IsHttps: {RequestIsHttps}", 
+                isProduction, isHttps, forwardedProto, Request.IsHttps);
 
             try
             {
@@ -151,9 +153,10 @@ public class AuthController : ControllerBase
     {
         var isProduction = _env.IsProduction();
         // En Render y otros servicios cloud, verificar headers de proxy para HTTPS
+        var forwardedProto = Request.Headers["X-Forwarded-Proto"].ToString();
         var isHttps = Request.IsHttps 
-            || Request.Headers["X-Forwarded-Proto"].ToString().Equals("https", StringComparison.OrdinalIgnoreCase)
-            || isProduction;
+            || (!string.IsNullOrEmpty(forwardedProto) && forwardedProto.Equals("https", StringComparison.OrdinalIgnoreCase))
+            || isProduction; // En producción, asumir HTTPS
 
         Response.Cookies.Delete("auth_token", new CookieOptions
         {
