@@ -114,16 +114,23 @@ public class AuthController : ControllerBase
             {
                 var expiresMinutes = int.Parse(_cfg["Jwt:ExpiresMinutes"] ?? _cfg["JWT_EXPIRES_MINUTES"] ?? "4320");
                 
-                Response.Cookies.Append("auth_token", token, new CookieOptions
+                var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None para HTTPS cross-origin
                     Secure = isHttps, // Secure en HTTPS
                     Path = "/",
                     MaxAge = TimeSpan.FromMinutes(expiresMinutes)
-                });
+                    // NO especificar Domain - permite que la cookie funcione en cross-origin
+                };
+                
+                Response.Cookies.Append("auth_token", token, cookieOptions);
+                
+                // Asegurar que los headers CORS estén presentes
+                Response.Headers.Append("Access-Control-Allow-Credentials", "true");
 
-                _logger.LogInformation("Login exitoso para: {Email}", sanitizedEmail);
+                _logger.LogInformation("Login exitoso para: {Email}. Cookie configurada: SameSite={SameSite}, Secure={Secure}", 
+                    sanitizedEmail, cookieOptions.SameSite, cookieOptions.Secure);
                 return Ok(new { message = "Login exitoso" });
             }
             catch (Exception ex)
