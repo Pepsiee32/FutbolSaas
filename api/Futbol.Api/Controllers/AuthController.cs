@@ -77,14 +77,15 @@ public class AuthController : ControllerBase
         var token = CreateJwt(user);
 
         var isProduction = _env.IsProduction();
+        var isHttps = Request.IsHttps || isProduction;
 
         Response.Cookies.Append("auth_token", token, new CookieOptions
         {
             HttpOnly = true,
-            SameSite = SameSiteMode.Lax,
-            Secure = isProduction, // Secure solo en producción (HTTPS)
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None para HTTPS cross-origin
+            Secure = isHttps, // Secure en HTTPS
             Path = "/",
-            MaxAge = TimeSpan.FromMinutes(int.Parse(_cfg["Jwt:ExpiresMinutes"]!))
+            MaxAge = TimeSpan.FromMinutes(int.Parse(_cfg["Jwt:ExpiresMinutes"] ?? "4320"))
         });
 
         return Ok(new { message = "Login exitoso" });
@@ -102,16 +103,32 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        Response.Cookies.Delete("auth_token");
+        var isProduction = _env.IsProduction();
+        var isHttps = Request.IsHttps || isProduction;
+
+        Response.Cookies.Delete("auth_token", new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+            Secure = isHttps,
+            Path = "/"
+        });
         return Ok();
     }
 
     private string CreateJwt(ApplicationUser user)
     {
-        var key = _cfg["Jwt:Key"]!;
-        var issuer = _cfg["Jwt:Issuer"]!;
-        var audience = _cfg["Jwt:Audience"]!;
-        var expiresMin = int.Parse(_cfg["Jwt:ExpiresMinutes"]!);
+        var key = _cfg["Jwt:Key"] 
+            ?? _cfg["JWT_KEY"]
+            ?? throw new InvalidOperationException("JWT Key no configurada");
+        var issuer = _cfg["Jwt:Issuer"] 
+            ?? _cfg["JWT_ISSUER"]
+            ?? "Futbol.Api";
+        var audience = _cfg["Jwt:Audience"] 
+            ?? _cfg["JWT_AUDIENCE"]
+            ?? "Futbol.Web";
+        var expiresMinStr = _cfg["Jwt:ExpiresMinutes"] ?? _cfg["JWT_EXPIRES_MINUTES"] ?? "4320";
+        var expiresMin = int.Parse(expiresMinStr);
 
         var claims = new[]
         {

@@ -10,7 +10,9 @@ First, run the development server:
 cd api
 cd Futbol.Api
 dotnet run
-
+-----------
+git add ., git commit -m "Fix CORS", git push
+----------------
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
