@@ -21,7 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await auth.me();
       setMe(u);
-      return u; // Retornar el usuario para verificar éxito
+    } catch {
+      setMe(null);
+    }
+  }
+
+  // Función interna que retorna el usuario para verificar éxito
+  async function refreshInternal(): Promise<MeResponse | null> {
+    try {
+      const u = await auth.me();
+      setMe(u);
+      return u;
     } catch {
       setMe(null);
       return null;
@@ -39,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     while (attempts < maxAttempts && !user) {
       try {
-        user = await refresh();
+        user = await refreshInternal();
         if (user) break; // Si tenemos usuario, salir
         // Si no hay usuario, esperar un poco más y reintentar
         await new Promise(resolve => setTimeout(resolve, 500));

@@ -11,7 +11,10 @@ cd api
 cd Futbol.Api
 dotnet run
 -----------
-git add ., git commit -m "Fix CORS", git push
+git status
+git add . 
+git commit -m "Fix CORS"
+git push origin main
 ----------------
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
