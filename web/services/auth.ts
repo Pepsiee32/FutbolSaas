@@ -14,6 +14,13 @@ export const auth = {
     // Almacenar token como fallback para móviles (especialmente Safari iOS)
     if (response && "token" in response && response.token && typeof window !== "undefined") {
       localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
+      if (process.env.NODE_ENV === "development") {
+        console.log("Token almacenado en localStorage como backup");
+      }
+    } else {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("No se recibió token en la respuesta del login", response);
+      }
     }
   },
 

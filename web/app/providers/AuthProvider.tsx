@@ -31,9 +31,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await auth.me();
       setMe(u);
+      if (process.env.NODE_ENV === "development") {
+        console.log("refreshInternal exitoso:", u);
+      }
       return u;
-    } catch {
+    } catch (error) {
       setMe(null);
+      if (process.env.NODE_ENV === "development") {
+        console.error("refreshInternal falló:", error);
+      }
       return null;
     }
   }

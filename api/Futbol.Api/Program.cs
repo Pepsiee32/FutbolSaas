@@ -85,17 +85,17 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = ctx =>
         {
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             var hasCookie = ctx.Request.Cookies.TryGetValue("auth_token", out var token);
+            
             if (hasCookie && !string.IsNullOrEmpty(token))
             {
                 ctx.Token = token;
-                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("JWT Bearer: Cookie 'auth_token' encontrada en request a {Path}", ctx.Request.Path);
+                logger.LogWarning("🔐 JWT Bearer: Cookie 'auth_token' encontrada en request a {Path}", ctx.Request.Path);
             }
             else
             {
-                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning("JWT Bearer: Cookie 'auth_token' NO encontrada en request a {Path}. Cookies disponibles: {Cookies}", 
+                logger.LogWarning("⚠️ JWT Bearer: Cookie 'auth_token' NO encontrada en request a {Path}. Cookies disponibles: {Cookies}", 
                     ctx.Request.Path, string.Join(", ", ctx.Request.Cookies.Keys));
                 
                 // Intentar leer desde header como fallback (útil para móviles)
@@ -104,7 +104,11 @@ builder.Services.AddAuthentication(options =>
                 {
                     var headerToken = authHeader.Substring("Bearer ".Length).Trim();
                     ctx.Token = headerToken;
-                    logger.LogInformation("JWT Bearer: Token encontrado en header Authorization");
+                    logger.LogWarning("✅ JWT Bearer: Token encontrado en header Authorization para {Path}", ctx.Request.Path);
+                }
+                else
+                {
+                    logger.LogWarning("❌ JWT Bearer: NO se encontró ni cookie ni header Authorization en request a {Path}", ctx.Request.Path);
                 }
             }
 

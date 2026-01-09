@@ -69,9 +69,14 @@ export async function api<T>(
     headers["Content-Type"] = "application/json";
   }
   
-  // Agregar token en header como fallback para móviles
-  if (backupToken && (path.includes("/auth/me") || path.includes("/matches"))) {
+  // Agregar token en header como fallback para móviles (SIEMPRE si está disponible para endpoints protegidos)
+  if (backupToken && (path.includes("/auth/me") || path.includes("/matches") || path.includes("/auth/logout"))) {
     headers["Authorization"] = `Bearer ${backupToken}`;
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Enviando token en header Authorization para ${path}`);
+    }
+  } else if (path.includes("/auth/me") && !backupToken && process.env.NODE_ENV === "development") {
+    console.warn(`Intentando /auth/me sin token de backup. Cookie debería funcionar.`);
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -107,8 +112,24 @@ export async function api<T>(
   const text = await res.text();
   
   // Si viene vacío (algunos endpoints como register pueden devolver 200 sin body)
-  if (!text) return {} as T;
+  if (!text) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Respuesta vacía de ${path}`);
+    }
+    return {} as T;
+  }
 
   // Parsear JSON
-  return JSON.parse(text) as T;
+  try {
+    const parsed = JSON.parse(text) as T;
+    if (process.env.NODE_ENV === "development" && path === "/auth/login") {
+      console.log("Respuesta del login parseada:", parsed);
+    }
+    return parsed;
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error(`Error parseando respuesta de ${path}:`, error, "Texto:", text);
+    }
+    throw new Error(`Error al parsear respuesta: ${error}`);
+  }
 }

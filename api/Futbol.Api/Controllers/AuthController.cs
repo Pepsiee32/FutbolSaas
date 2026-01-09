@@ -153,15 +153,18 @@ public class AuthController : ControllerBase
     [HttpGet("me")]
     public IActionResult Me()
     {
-        // Logging para debugging
+        // Logging para debugging - usar Warning para que aparezca en Render
         var hasCookie = Request.Cookies.TryGetValue("auth_token", out var cookieToken);
-        _logger.LogInformation("Me endpoint llamado. Cookie presente: {HasCookie}, User autenticado: {IsAuthenticated}, Path: {Path}", 
-            hasCookie, User.Identity?.IsAuthenticated ?? false, Request.Path);
+        var authHeader = Request.Headers["Authorization"].ToString();
+        var hasHeader = !string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
         
-        if (!hasCookie)
+        _logger.LogWarning("🔍 /auth/me llamado. Cookie: {HasCookie}, Header: {HasHeader}, User autenticado: {IsAuthenticated}", 
+            hasCookie, hasHeader, User.Identity?.IsAuthenticated ?? false);
+        
+        if (!hasCookie && !hasHeader)
         {
-            _logger.LogWarning("Me endpoint: Cookie 'auth_token' NO presente en request. Cookies disponibles: {Cookies}", 
-                string.Join(", ", Request.Cookies.Keys));
+            _logger.LogWarning("⚠️ /auth/me: NO cookie NI header Authorization. Cookies: {Cookies}, Headers: {AuthHeader}", 
+                string.Join(", ", Request.Cookies.Keys), authHeader);
         }
         
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
@@ -169,10 +172,11 @@ public class AuthController : ControllerBase
         
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
         {
-            _logger.LogError("Me endpoint: Usuario autenticado pero claims vacíos. UserId: {UserId}, Email: {Email}", userId, email);
+            _logger.LogError("❌ /auth/me: Usuario autenticado pero claims vacíos. UserId: {UserId}, Email: {Email}", userId, email);
             return Unauthorized(new { message = "Token inválido o expirado" });
         }
         
+        _logger.LogWarning("✅ /auth/me exitoso para: {Email}", email);
         return Ok(new { id = userId, email });
     }
 
