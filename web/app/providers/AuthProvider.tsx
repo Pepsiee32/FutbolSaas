@@ -54,14 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log(`[LOGIN] Dispositivo: ${isMobile ? 'MÓVIL' : 'DESKTOP'}`);
     }
     
-    // Hacer login - esto guardará el token en localStorage
-    await auth.login(email, password);
+    try {
+      // Hacer login - esto intentará guardar el token en localStorage si está disponible
+      await auth.login(email, password);
+    } catch (error) {
+      // Si el login falla (error de red, credenciales incorrectas, etc.), re-lanzar
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Error al iniciar sesión: ${errorMessage}`);
+    }
     
     // Verificar que el token se guardó correctamente
     const tokenGuardado = auth.getBackupToken();
-    if (!tokenGuardado && isMobile) {
+    if (!tokenGuardado) {
+      if (isMobile) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("⚠️ [MÓVIL] Token no se guardó en localStorage. La cookie puede no funcionar en móviles.");
+        }
+      } else {
+        if (process.env.NODE_ENV === "development") {
+          console.log("ℹ️ [DESKTOP] Token no disponible, pero la cookie debería funcionar.");
+        }
+      }
+    } else {
       if (process.env.NODE_ENV === "development") {
-        console.warn("⚠️ [MÓVIL] Token no se guardó en localStorage. La cookie puede no funcionar.");
+        console.log("✅ Token guardado correctamente en localStorage");
       }
     }
     

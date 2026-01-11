@@ -10,28 +10,50 @@ export const auth = {
     api<void>("/auth/register", "POST", { email, password }),
 
   login: async (email: string, password: string): Promise<void> => {
-    const response = await api<LoginResponse>("/auth/login", "POST", { email, password });
-    // Almacenar token como fallback para móviles (especialmente Safari iOS)
-    // CRÍTICO: Guardar inmediatamente para que esté disponible en la siguiente petición
-    if (response && "token" in response && response.token && typeof window !== "undefined") {
-      try {
-        localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
-        if (process.env.NODE_ENV === "development") {
-          console.log("✅ Token almacenado en localStorage como backup:", response.token.substring(0, 20) + "...");
-        }
-      } catch (error) {
-        // Si localStorage no está disponible (modo privado, etc.), loguear el error
-        if (process.env.NODE_ENV === "development") {
-          console.error("❌ Error al guardar token en localStorage:", error);
-        }
-        // No lanzar error aquí, la cookie puede funcionar
-      }
-    } else {
+    try {
+      const response = await api<LoginResponse>("/auth/login", "POST", { email, password });
+      
       if (process.env.NODE_ENV === "development") {
-        console.warn("⚠️ No se recibió token en la respuesta del login", response);
+        console.log("🔍 Respuesta completa del login:", response);
       }
-      // Si no hay token, puede que la cookie funcione, pero es mejor tener ambos
-      throw new Error("No se recibió token de autenticación. Por favor intenta nuevamente.");
+      
+      // Almacenar token como fallback para móviles (especialmente Safari iOS)
+      // CRÍTICO: Guardar inmediatamente para que esté disponible en la siguiente petición
+      if (response && typeof response === "object" && "token" in response) {
+        const token = (response as any).token;
+        if (token && typeof token === "string" && token.trim().length > 0) {
+          try {
+            localStorage.setItem(TOKEN_STORAGE_KEY, token);
+            if (process.env.NODE_ENV === "development") {
+              console.log("✅ Token almacenado en localStorage como backup:", token.substring(0, 20) + "...");
+            }
+          } catch (error) {
+            // Si localStorage no está disponible (modo privado, etc.), loguear el error
+            if (process.env.NODE_ENV === "development") {
+              console.error("❌ Error al guardar token en localStorage:", error);
+            }
+            // No lanzar error aquí, la cookie puede funcionar
+          }
+        } else {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("⚠️ Token recibido pero está vacío o inválido:", token);
+          }
+          // No lanzar error aquí, la cookie puede funcionar en desktop
+        }
+      } else {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("⚠️ No se recibió token en la respuesta del login. Respuesta:", response);
+          console.warn("⚠️ Esto puede ser normal si la cookie funciona correctamente.");
+        }
+        // NO lanzar error aquí - la cookie puede funcionar
+        // El error se lanzará en AuthProvider si la verificación de sesión falla
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("❌ Error en login:", error);
+      }
+      // Re-lanzar el error para que AuthProvider lo maneje
+      throw error;
     }
   },
 

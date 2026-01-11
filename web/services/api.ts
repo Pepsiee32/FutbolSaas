@@ -152,14 +152,24 @@ export async function api<T>(
   // Parsear JSON
   try {
     const parsed = JSON.parse(text) as T;
-    if (process.env.NODE_ENV === "development" && path === "/auth/login") {
-      console.log("Respuesta del login parseada:", parsed);
+    if (path === "/auth/login") {
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔍 Respuesta del login parseada:", parsed);
+        console.log("🔍 Tipo de respuesta:", typeof parsed);
+        console.log("🔍 Tiene token?:", parsed && typeof parsed === "object" && "token" in parsed);
+        if (parsed && typeof parsed === "object" && "token" in parsed) {
+          const token = (parsed as any).token;
+          console.log("🔍 Token recibido:", token ? `${token.substring(0, 20)}...` : "VACÍO");
+        }
+      }
     }
     return parsed;
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
-      console.error(`Error parseando respuesta de ${path}:`, error, "Texto:", text);
+      console.error(`❌ Error parseando respuesta de ${path}:`, error);
+      console.error(`❌ Texto recibido:`, text);
+      console.error(`❌ Longitud del texto:`, text?.length);
     }
-    throw new Error(`Error al parsear respuesta: ${error}`);
+    throw new Error(`Error al parsear respuesta del servidor: ${error}`);
   }
 }
