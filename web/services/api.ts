@@ -186,7 +186,6 @@ export async function api<T>(
   const text = await res.text();
   
   // Logging para Safari iOS siempre activo
-  const isIOS = isSafariIOS();
   if (isIOS && path === "/auth/login") {
     console.log(`[SAFARI iOS] 📄 Texto de respuesta recibido:`, text ? `${text.substring(0, 100)}...` : "VACÍO");
     console.log(`[SAFARI iOS] 📄 Longitud del texto:`, text?.length || 0);
@@ -209,7 +208,6 @@ export async function api<T>(
     const parsed = JSON.parse(text) as T;
     
     // Logging especial para login y Safari iOS
-    const isIOS = isSafariIOS();
     if (path === "/auth/login") {
       // Logging siempre activo para Safari iOS, solo en desarrollo para otros
       if (isIOS || process.env.NODE_ENV === "development") {
