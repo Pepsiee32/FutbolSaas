@@ -100,9 +100,9 @@ export async function api<T>(
     // Safari iOS: SIEMPRE usar header (las cookies están bloqueadas)
     if (isIOS) {
       headers["Authorization"] = `Bearer ${backupToken}`;
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[SAFARI iOS] 🔐 Forzando uso de header Authorization para ${path} (cookies bloqueadas)`);
-      }
+      // Logging siempre activo para Safari iOS para debugging
+      console.log(`[SAFARI iOS] 🔐 Enviando token en header Authorization para ${path}`);
+      console.log(`[SAFARI iOS] Token (primeros 30 chars): ${backupToken.substring(0, 30)}...`);
     } else if (isMobile) {
       // Otros móviles: priorizar el header sobre la cookie
       headers["Authorization"] = `Bearer ${backupToken}`;
@@ -118,10 +118,10 @@ export async function api<T>(
     }
   } else if (isProtectedEndpoint && !backupToken) {
     if (isIOS) {
-      // En Safari iOS, sin token es crítico
-      if (process.env.NODE_ENV === "development") {
-        console.error(`[SAFARI iOS] ❌ CRÍTICO: Intentando ${path} sin token. Las cookies no funcionan en Safari iOS.`);
-      }
+      // En Safari iOS, sin token es crítico - logging siempre activo
+      console.error(`[SAFARI iOS] ❌ CRÍTICO: Intentando ${path} sin token. Las cookies no funcionan en Safari iOS.`);
+      console.error(`[SAFARI iOS] localStorage disponible: ${typeof Storage !== 'undefined'}`);
+      console.error(`[SAFARI iOS] localStorage.getItem('auth_token_backup'): ${typeof window !== 'undefined' ? localStorage.getItem('auth_token_backup') : 'N/A'}`);
     } else if (isMobile) {
       if (process.env.NODE_ENV === "development") {
         console.warn(`[MÓVIL] ⚠️ Intentando ${path} sin token de backup. La cookie puede no funcionar en móviles.`);
@@ -133,6 +133,13 @@ export async function api<T>(
     }
   }
 
+  // Logging adicional para Safari iOS
+  if (isIOS && isProtectedEndpoint) {
+    console.log(`[SAFARI iOS] 📤 Enviando petición a ${API_BASE}${path}`);
+    console.log(`[SAFARI iOS] Headers:`, Object.keys(headers));
+    console.log(`[SAFARI iOS] Tiene token en header: ${!!headers["Authorization"]}`);
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: Object.keys(headers).length > 0 ? headers : undefined,
@@ -140,11 +147,24 @@ export async function api<T>(
     credentials: "include", // IMPORTANT: manda/recibe cookie auth_token
   });
 
+  // Logging de respuesta para Safari iOS
+  if (isIOS && isProtectedEndpoint) {
+    console.log(`[SAFARI iOS] 📥 Respuesta recibida: ${res.status} ${res.statusText}`);
+  }
+
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {
-      const data = (await res.json()) as ApiErrorBody;
+      // Clonar la respuesta para poder leerla sin consumir el stream
+      const clonedRes = res.clone();
+      const data = (await clonedRes.json()) as ApiErrorBody;
       detail = parseErrorMessage(data);
+      
+      // Logging adicional para Safari iOS en caso de error
+      if (isIOS && isProtectedEndpoint) {
+        console.error(`[SAFARI iOS] ❌ Error en respuesta:`, detail);
+        console.error(`[SAFARI iOS] Datos del error:`, data);
+      }
     } catch {
       // Si no se puede parsear, usar el status
       if (res.status === 400) {

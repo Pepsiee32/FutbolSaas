@@ -23,14 +23,33 @@ export const auth = {
         /Safari/i.test(navigator.userAgent) && 
         !/CriOS|FxiOS|OPiOS/i.test(navigator.userAgent);
       
+      // Logging siempre activo para Safari iOS
+      if (isSafariIOS) {
+        console.log("[SAFARI iOS] 🔍 Respuesta del login recibida:", response);
+        console.log("[SAFARI iOS] Tipo de respuesta:", typeof response);
+        console.log("[SAFARI iOS] Tiene propiedad 'token':", response && typeof response === "object" && "token" in response);
+      }
+      
       // Almacenar token como fallback para móviles (especialmente Safari iOS)
       // CRÍTICO: Guardar inmediatamente para que esté disponible en la siguiente petición
       if (response && typeof response === "object" && "token" in response) {
         const token = (response as any).token;
+        if (isSafariIOS) {
+          console.log("[SAFARI iOS] Token recibido:", token ? `${token.substring(0, 30)}...` : "VACÍO");
+          console.log("[SAFARI iOS] Token es string:", typeof token === "string");
+          console.log("[SAFARI iOS] Token tiene longitud:", token ? token.length : 0);
+        }
+        
         if (token && typeof token === "string" && token.trim().length > 0) {
           try {
             localStorage.setItem(TOKEN_STORAGE_KEY, token);
-            if (process.env.NODE_ENV === "development") {
+            // Logging siempre activo para Safari iOS
+            if (isSafariIOS) {
+              console.log("✅ [SAFARI iOS] Token almacenado en localStorage:", token.substring(0, 30) + "...");
+              // Verificar que se guardó correctamente
+              const verificado = localStorage.getItem(TOKEN_STORAGE_KEY);
+              console.log("✅ [SAFARI iOS] Token verificado en localStorage:", verificado ? "OK" : "FALLO");
+            } else if (process.env.NODE_ENV === "development") {
               console.log("✅ Token almacenado en localStorage como backup:", token.substring(0, 20) + "...");
             }
           } catch (error) {
