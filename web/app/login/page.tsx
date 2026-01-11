@@ -32,7 +32,17 @@ export default function LoginPage() {
       // Usar replace en vez de push para evitar que el usuario pueda volver atrás
       router.replace("/");
     } catch (e: any) {
-      setMsg(`Error ❌ ${e.message ?? e}`);
+      const errorMessage = e.message ?? String(e) ?? "Error desconocido";
+      // Mejorar el mensaje de error para que sea más claro
+      let displayMessage = errorMessage;
+      if (errorMessage.includes("No se pudo verificar la sesión")) {
+        displayMessage = "Error: No se pudo verificar la sesión. Por favor intenta nuevamente.";
+      } else if (errorMessage.includes("No se recibió token")) {
+        displayMessage = "Error: No se recibió token de autenticación. Por favor intenta nuevamente.";
+      } else if (errorMessage.includes("401") || errorMessage.includes("No autorizado")) {
+        displayMessage = "Error: Credenciales incorrectas. Verifica tu email y contraseña.";
+      }
+      setMsg(`Error ❌ ${displayMessage}`);
     } finally {
       setLoading(false);
     }

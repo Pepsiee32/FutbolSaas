@@ -53,6 +53,14 @@ function parseErrorMessage(data: ApiErrorBody): string {
   return "Error desconocido";
 }
 
+// Función helper para detectar si es un dispositivo móvil
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
 export async function api<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
@@ -69,14 +77,36 @@ export async function api<T>(
     headers["Content-Type"] = "application/json";
   }
   
-  // Agregar token en header como fallback para móviles (SIEMPRE si está disponible para endpoints protegidos)
-  if (backupToken && (path.includes("/auth/me") || path.includes("/matches") || path.includes("/auth/logout"))) {
-    headers["Authorization"] = `Bearer ${backupToken}`;
-    if (process.env.NODE_ENV === "development") {
-      console.log(`Enviando token en header Authorization para ${path}`);
+  // Detectar si es móvil
+  const isMobile = isMobileDevice();
+  
+  // En móviles, SIEMPRE usar el token del header si está disponible para endpoints protegidos
+  // En desktop, usar el token como fallback si la cookie no funciona
+  const isProtectedEndpoint = path.includes("/auth/me") || 
+                              path.includes("/matches") || 
+                              path.includes("/auth/logout");
+  
+  if (backupToken && isProtectedEndpoint) {
+    // En móviles, priorizar el header sobre la cookie
+    // En desktop, usar como fallback
+    if (isMobile) {
+      headers["Authorization"] = `Bearer ${backupToken}`;
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[MÓVIL] Enviando token en header Authorization para ${path}`);
+      }
+    } else {
+      // En desktop, solo usar como fallback si es necesario
+      headers["Authorization"] = `Bearer ${backupToken}`;
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[DESKTOP] Token disponible en header como fallback para ${path}`);
+      }
     }
-  } else if (path.includes("/auth/me") && !backupToken && process.env.NODE_ENV === "development") {
-    console.warn(`Intentando /auth/me sin token de backup. Cookie debería funcionar.`);
+  } else if (isProtectedEndpoint && !backupToken && process.env.NODE_ENV === "development") {
+    if (isMobile) {
+      console.warn(`[MÓVIL] ⚠️ Intentando ${path} sin token de backup. La cookie puede no funcionar en móviles.`);
+    } else {
+      console.warn(`[DESKTOP] Intentando ${path} sin token de backup. Cookie debería funcionar.`);
+    }
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
