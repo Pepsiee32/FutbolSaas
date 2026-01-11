@@ -44,14 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Función helper para detectar Safari iOS
+  function isSafariIOS(): boolean {
+    if (typeof window === "undefined") return false;
+    const ua = navigator.userAgent;
+    return /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|OPiOS/i.test(ua);
+  }
+
   async function login(email: string, password: string) {
-    // Detectar si es móvil para ajustar estrategia
+    // Detectar si es móvil y específicamente Safari iOS
     const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
+    const isIOS = isSafariIOS();
     
     if (process.env.NODE_ENV === "development") {
-      console.log(`[LOGIN] Dispositivo: ${isMobile ? 'MÓVIL' : 'DESKTOP'}`);
+      console.log(`[LOGIN] Dispositivo: ${isMobile ? 'MÓVIL' : 'DESKTOP'}, Safari iOS: ${isIOS ? 'SÍ' : 'NO'}`);
     }
     
     try {
@@ -66,7 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Verificar que el token se guardó correctamente
     const tokenGuardado = auth.getBackupToken();
     if (!tokenGuardado) {
-      if (isMobile) {
+      if (isIOS) {
+        // En Safari iOS, el token es CRÍTICO porque las cookies no funcionan
+        if (process.env.NODE_ENV === "development") {
+          console.error("❌ [SAFARI iOS] CRÍTICO: Token no se guardó en localStorage. Las cookies no funcionan en Safari iOS.");
+        }
+        throw new Error("No se pudo guardar el token de autenticación. Por favor intenta nuevamente. Si el problema persiste, verifica que no estés en modo privado.");
+      } else if (isMobile) {
         if (process.env.NODE_ENV === "development") {
           console.warn("⚠️ [MÓVIL] Token no se guardó en localStorage. La cookie puede no funcionar en móviles.");
         }
@@ -81,14 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    // En móviles, usar el token del header inmediatamente (no esperar a la cookie)
+    // En Safari iOS, usar el token del header inmediatamente (las cookies no funcionan)
+    // En otros móviles, usar el token del header inmediatamente (no esperar a la cookie)
     // En desktop, dar un pequeño delay para que la cookie esté disponible
-    const initialDelay = isMobile ? 200 : 300; // Menos delay en móviles porque usamos header
+    const initialDelay = isIOS ? 100 : (isMobile ? 200 : 300); // Menos delay en Safari iOS
     await new Promise(resolve => setTimeout(resolve, initialDelay));
     
-    // Intentar refresh, con más reintentos en móviles
+    // Intentar refresh, con más reintentos en Safari iOS y otros móviles
     let attempts = 0;
-    const maxAttempts = isMobile ? 6 : 3; // Más reintentos en móviles
+    const maxAttempts = isIOS ? 8 : (isMobile ? 6 : 3); // Más reintentos en Safari iOS
     let user = null;
     let lastError: Error | null = null;
     

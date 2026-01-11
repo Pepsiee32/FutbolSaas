@@ -61,6 +61,14 @@ function isMobileDevice(): boolean {
   );
 }
 
+// Función helper para detectar específicamente Safari iOS
+function isSafariIOS(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = navigator.userAgent;
+  // Detectar Safari en iOS (iPhone, iPad, iPod)
+  return /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|OPiOS/i.test(ua);
+}
+
 export async function api<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
@@ -77,35 +85,51 @@ export async function api<T>(
     headers["Content-Type"] = "application/json";
   }
   
-  // Detectar si es móvil
+  // Detectar si es móvil y específicamente Safari iOS
   const isMobile = isMobileDevice();
+  const isIOS = isSafariIOS();
   
-  // En móviles, SIEMPRE usar el token del header si está disponible para endpoints protegidos
+  // En Safari iOS, SIEMPRE usar el header Authorization (las cookies no funcionan bien)
+  // En otros móviles, priorizar el header sobre la cookie
   // En desktop, usar el token como fallback si la cookie no funciona
   const isProtectedEndpoint = path.includes("/auth/me") || 
                               path.includes("/matches") || 
                               path.includes("/auth/logout");
   
   if (backupToken && isProtectedEndpoint) {
-    // En móviles, priorizar el header sobre la cookie
-    // En desktop, usar como fallback
-    if (isMobile) {
+    // Safari iOS: SIEMPRE usar header (las cookies están bloqueadas)
+    if (isIOS) {
+      headers["Authorization"] = `Bearer ${backupToken}`;
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[SAFARI iOS] 🔐 Forzando uso de header Authorization para ${path} (cookies bloqueadas)`);
+      }
+    } else if (isMobile) {
+      // Otros móviles: priorizar el header sobre la cookie
       headers["Authorization"] = `Bearer ${backupToken}`;
       if (process.env.NODE_ENV === "development") {
         console.log(`[MÓVIL] Enviando token en header Authorization para ${path}`);
       }
     } else {
-      // En desktop, solo usar como fallback si es necesario
+      // Desktop: usar como fallback si es necesario
       headers["Authorization"] = `Bearer ${backupToken}`;
       if (process.env.NODE_ENV === "development") {
         console.log(`[DESKTOP] Token disponible en header como fallback para ${path}`);
       }
     }
-  } else if (isProtectedEndpoint && !backupToken && process.env.NODE_ENV === "development") {
-    if (isMobile) {
-      console.warn(`[MÓVIL] ⚠️ Intentando ${path} sin token de backup. La cookie puede no funcionar en móviles.`);
+  } else if (isProtectedEndpoint && !backupToken) {
+    if (isIOS) {
+      // En Safari iOS, sin token es crítico
+      if (process.env.NODE_ENV === "development") {
+        console.error(`[SAFARI iOS] ❌ CRÍTICO: Intentando ${path} sin token. Las cookies no funcionan en Safari iOS.`);
+      }
+    } else if (isMobile) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[MÓVIL] ⚠️ Intentando ${path} sin token de backup. La cookie puede no funcionar en móviles.`);
+      }
     } else {
-      console.warn(`[DESKTOP] Intentando ${path} sin token de backup. Cookie debería funcionar.`);
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[DESKTOP] Intentando ${path} sin token de backup. Cookie debería funcionar.`);
+      }
     }
   }
 

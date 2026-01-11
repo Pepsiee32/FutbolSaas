@@ -17,6 +17,12 @@ export const auth = {
         console.log("🔍 Respuesta completa del login:", response);
       }
       
+      // Detectar Safari iOS
+      const isSafariIOS = typeof window !== "undefined" && 
+        /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+        /Safari/i.test(navigator.userAgent) && 
+        !/CriOS|FxiOS|OPiOS/i.test(navigator.userAgent);
+      
       // Almacenar token como fallback para móviles (especialmente Safari iOS)
       // CRÍTICO: Guardar inmediatamente para que esté disponible en la siguiente petición
       if (response && typeof response === "object" && "token" in response) {
@@ -28,25 +34,51 @@ export const auth = {
               console.log("✅ Token almacenado en localStorage como backup:", token.substring(0, 20) + "...");
             }
           } catch (error) {
-            // Si localStorage no está disponible (modo privado, etc.), loguear el error
-            if (process.env.NODE_ENV === "development") {
-              console.error("❌ Error al guardar token en localStorage:", error);
+            // Si localStorage no está disponible (modo privado en Safari iOS, etc.)
+            if (isSafariIOS) {
+              // En Safari iOS, el token es CRÍTICO porque las cookies no funcionan
+              if (process.env.NODE_ENV === "development") {
+                console.error("❌ [SAFARI iOS] Error crítico al guardar token en localStorage:", error);
+                console.error("❌ [SAFARI iOS] Esto puede ser porque estás en modo privado. Las cookies tampoco funcionan en Safari iOS.");
+              }
+              throw new Error("No se pudo guardar el token de autenticación. Por favor desactiva el modo privado o intenta en otro navegador.");
+            } else {
+              // En otros navegadores, la cookie puede funcionar
+              if (process.env.NODE_ENV === "development") {
+                console.error("❌ Error al guardar token en localStorage:", error);
+                console.warn("⚠️ La cookie puede funcionar como alternativa.");
+              }
             }
-            // No lanzar error aquí, la cookie puede funcionar
           }
         } else {
-          if (process.env.NODE_ENV === "development") {
-            console.warn("⚠️ Token recibido pero está vacío o inválido:", token);
+          if (isSafariIOS) {
+            // En Safari iOS, sin token es crítico
+            if (process.env.NODE_ENV === "development") {
+              console.error("❌ [SAFARI iOS] Token recibido pero está vacío o inválido:", token);
+            }
+            throw new Error("No se recibió un token de autenticación válido. Por favor intenta nuevamente.");
+          } else {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("⚠️ Token recibido pero está vacío o inválido:", token);
+            }
+            // No lanzar error aquí, la cookie puede funcionar en desktop
           }
-          // No lanzar error aquí, la cookie puede funcionar en desktop
         }
       } else {
-        if (process.env.NODE_ENV === "development") {
-          console.warn("⚠️ No se recibió token en la respuesta del login. Respuesta:", response);
-          console.warn("⚠️ Esto puede ser normal si la cookie funciona correctamente.");
+        if (isSafariIOS) {
+          // En Safari iOS, sin token es crítico
+          if (process.env.NODE_ENV === "development") {
+            console.error("❌ [SAFARI iOS] No se recibió token en la respuesta del login. Respuesta:", response);
+          }
+          throw new Error("No se recibió token de autenticación. Las cookies no funcionan en Safari iOS. Por favor intenta nuevamente.");
+        } else {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("⚠️ No se recibió token en la respuesta del login. Respuesta:", response);
+            console.warn("⚠️ Esto puede ser normal si la cookie funciona correctamente.");
+          }
+          // NO lanzar error aquí - la cookie puede funcionar
+          // El error se lanzará en AuthProvider si la verificación de sesión falla
         }
-        // NO lanzar error aquí - la cookie puede funcionar
-        // El error se lanzará en AuthProvider si la verificación de sesión falla
       }
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
