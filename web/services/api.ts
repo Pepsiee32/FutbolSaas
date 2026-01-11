@@ -185,8 +185,19 @@ export async function api<T>(
   // Obtener el texto de la respuesta
   const text = await res.text();
   
+  // Logging para Safari iOS siempre activo
+  const isIOS = isSafariIOS();
+  if (isIOS && path === "/auth/login") {
+    console.log(`[SAFARI iOS] 📄 Texto de respuesta recibido:`, text ? `${text.substring(0, 100)}...` : "VACÍO");
+    console.log(`[SAFARI iOS] 📄 Longitud del texto:`, text?.length || 0);
+  }
+  
   // Si viene vacío (algunos endpoints como register pueden devolver 200 sin body)
-  if (!text) {
+  if (!text || text.trim().length === 0) {
+    if (isIOS && path === "/auth/login") {
+      console.error(`[SAFARI iOS] ❌ CRÍTICO: Respuesta vacía del login. Esto no debería pasar.`);
+      throw new Error("El servidor no devolvió una respuesta válida. Por favor intenta nuevamente.");
+    }
     if (process.env.NODE_ENV === "development") {
       console.log(`Respuesta vacía de ${path}`);
     }
@@ -196,23 +207,35 @@ export async function api<T>(
   // Parsear JSON
   try {
     const parsed = JSON.parse(text) as T;
+    
+    // Logging especial para login y Safari iOS
+    const isIOS = isSafariIOS();
     if (path === "/auth/login") {
-      if (process.env.NODE_ENV === "development") {
+      // Logging siempre activo para Safari iOS, solo en desarrollo para otros
+      if (isIOS || process.env.NODE_ENV === "development") {
         console.log("🔍 Respuesta del login parseada:", parsed);
         console.log("🔍 Tipo de respuesta:", typeof parsed);
+        console.log("🔍 Es objeto?:", parsed && typeof parsed === "object");
         console.log("🔍 Tiene token?:", parsed && typeof parsed === "object" && "token" in parsed);
         if (parsed && typeof parsed === "object" && "token" in parsed) {
           const token = (parsed as any).token;
           console.log("🔍 Token recibido:", token ? `${token.substring(0, 20)}...` : "VACÍO");
+          console.log("🔍 Token tipo:", typeof token);
+          console.log("🔍 Token longitud:", token ? token.length : 0);
+        } else {
+          console.error("❌ La respuesta NO tiene la propiedad 'token'");
+          console.error("❌ Propiedades disponibles:", parsed && typeof parsed === "object" ? Object.keys(parsed) : "N/A");
         }
       }
     }
     return parsed;
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
+    // Logging siempre activo para Safari iOS
+    if (isIOS || process.env.NODE_ENV === "development") {
       console.error(`❌ Error parseando respuesta de ${path}:`, error);
       console.error(`❌ Texto recibido:`, text);
       console.error(`❌ Longitud del texto:`, text?.length);
+      console.error(`❌ Primeros 200 caracteres:`, text?.substring(0, 200));
     }
     throw new Error(`Error al parsear respuesta del servidor: ${error}`);
   }

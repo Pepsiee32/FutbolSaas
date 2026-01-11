@@ -27,7 +27,13 @@ export const auth = {
       if (isSafariIOS) {
         console.log("[SAFARI iOS] 🔍 Respuesta del login recibida:", response);
         console.log("[SAFARI iOS] Tipo de respuesta:", typeof response);
+        console.log("[SAFARI iOS] Es null/undefined?:", response === null || response === undefined);
+        console.log("[SAFARI iOS] Es objeto?:", response && typeof response === "object");
         console.log("[SAFARI iOS] Tiene propiedad 'token':", response && typeof response === "object" && "token" in response);
+        if (response && typeof response === "object") {
+          console.log("[SAFARI iOS] Propiedades del objeto:", Object.keys(response));
+          console.log("[SAFARI iOS] Contenido completo:", JSON.stringify(response));
+        }
       }
       
       // Almacenar token como fallback para móviles (especialmente Safari iOS)
@@ -85,9 +91,16 @@ export const auth = {
         }
       } else {
         if (isSafariIOS) {
-          // En Safari iOS, sin token es crítico
-          if (process.env.NODE_ENV === "development") {
-            console.error("❌ [SAFARI iOS] No se recibió token en la respuesta del login. Respuesta:", response);
+          // En Safari iOS, sin token es crítico - logging siempre activo
+          console.error("❌ [SAFARI iOS] No se recibió token en la respuesta del login.");
+          console.error("❌ [SAFARI iOS] Respuesta completa:", response);
+          console.error("❌ [SAFARI iOS] Tipo de respuesta:", typeof response);
+          console.error("❌ [SAFARI iOS] Es null?:", response === null);
+          console.error("❌ [SAFARI iOS] Es undefined?:", response === undefined);
+          console.error("❌ [SAFARI iOS] Es objeto?:", response && typeof response === "object");
+          if (response && typeof response === "object") {
+            console.error("❌ [SAFARI iOS] Propiedades disponibles:", Object.keys(response));
+            console.error("❌ [SAFARI iOS] JSON stringificado:", JSON.stringify(response));
           }
           throw new Error("No se recibió token de autenticación. Las cookies no funcionan en Safari iOS. Por favor intenta nuevamente.");
         } else {
